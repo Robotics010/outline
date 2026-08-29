@@ -35,6 +35,31 @@ export default class CollectionsStore extends Store<Collection> {
     return this.orderedData.filter((c) => c.isActive);
   }
 
+  /**
+   * Resolves the collection a newly created document should be published into,
+   * preferring an explicitly requested collection, then the team default, then
+   * the first collection the user can create documents in.
+   *
+   * @param preferredId an optional collection to prefer, such as an active filter.
+   * @returns the collection id to publish into, or undefined when none is writable.
+   */
+  publishTargetId(preferredId?: string | null): string | undefined {
+    const canCreateIn = (collectionId: string) =>
+      !!this.data.get(collectionId) &&
+      !!this.rootStore.policies.abilities(collectionId).createDocument;
+
+    for (const candidate of [
+      preferredId,
+      this.rootStore.auth.team?.defaultCollectionId,
+    ]) {
+      if (candidate && canCreateIn(candidate)) {
+        return candidate;
+      }
+    }
+
+    return this.allActive.find((collection) => canCreateIn(collection.id))?.id;
+  }
+
   @computed
   get orderedData(): Collection[] {
     let collections = Array.from(this.data.values());

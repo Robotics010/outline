@@ -90,6 +90,7 @@ import { setPersistedState } from "~/hooks/usePersistedState";
 import history from "~/utils/history";
 import {
   documentHistoryPath,
+  documentTitleFromSearchQuery,
   homePath,
   newDocumentPath,
   newNestedDocumentPath,
@@ -1365,6 +1366,57 @@ export const searchDocumentsForQueryActionFactory = (query: string) =>
     icon: <SearchIcon />,
     to: searchPath({ query }),
     visible: ({ location }) => location.pathname !== searchPath(),
+  });
+
+/**
+ * Builds an action that creates a document titled with the given search query,
+ * published into the collection new documents belong in, so that an
+ * unanswered question becomes a document someone else can answer.
+ *
+ * @param query the search query to title the new document with.
+ * @returns an action that navigates to the new document screen.
+ */
+export const createDocumentWithTitleActionFactory = (query: string) =>
+  createInternalLinkAction({
+    id: "create-document-with-title",
+    name: ({ t }) =>
+      t(`Create a document titled "{{searchQuery}}"`, {
+        searchQuery: documentTitleFromSearchQuery(query),
+      }),
+    analyticsName: "New document from search",
+    section: SearchResultsSection,
+    priority: -2,
+    icon: <NewDocumentIcon />,
+    keywords: "new write answer question",
+    visible: ({ currentTeamId, activeCollectionId, stores }) => {
+      if (!documentTitleFromSearchQuery(query)) {
+        return false;
+      }
+
+      if (
+        activeCollectionId &&
+        !stores.policies.abilities(activeCollectionId).createDocument
+      ) {
+        return false;
+      }
+
+      return (
+        !!currentTeamId &&
+        stores.policies.abilities(currentTeamId).createDocument
+      );
+    },
+    to: ({ activeCollectionId, sidebarContext, stores }) => {
+      const [pathname, search] = newDocumentPath(
+        stores.collections.publishTargetId(activeCollectionId),
+        { title: documentTitleFromSearchQuery(query) }
+      ).split("?");
+
+      return {
+        pathname,
+        search,
+        state: { sidebarContext },
+      };
+    },
   });
 
 export const moveDocumentToCollection = createAction({
