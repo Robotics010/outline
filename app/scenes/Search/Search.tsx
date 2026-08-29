@@ -1,9 +1,10 @@
 import { observer } from "mobx-react";
+import { PlusIcon } from "outline-icons";
 import { v4 as uuidv4 } from "uuid";
 import queryString from "query-string";
 import * as React from "react";
-import { useTranslation } from "react-i18next";
-import { useHistory, useLocation, useRouteMatch } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
+import { Link, useHistory, useLocation, useRouteMatch } from "react-router-dom";
 import { Waypoint } from "react-waypoint";
 import styled from "styled-components";
 import breakpoint from "styled-components-breakpoint";
@@ -17,6 +18,7 @@ import type {
 } from "@shared/types";
 import { StatusFilter as TStatusFilter } from "@shared/types";
 import ArrowKeyNavigation from "~/components/ArrowKeyNavigation";
+import Button from "~/components/Button";
 import DocumentListItem from "~/components/DocumentListItem";
 import DocumentSelectionToolbar from "~/components/DocumentSelectionToolbar";
 import Fade from "~/components/Fade";
@@ -28,12 +30,19 @@ import Scene from "~/components/Scene";
 import Switch from "~/components/Switch";
 import Text from "~/components/Text";
 import env from "~/env";
+import useCurrentTeam from "~/hooks/useCurrentTeam";
 import usePaginatedRequest from "~/hooks/usePaginatedRequest";
+import usePolicy from "~/hooks/usePolicy";
 import useQuery from "~/hooks/useQuery";
 import useStores from "~/hooks/useStores";
 import type { PaginationParams, SearchResult } from "~/types";
+import { preloadEditor } from "~/routes/scenes";
 import { preventDefault } from "~/utils/events";
-import { searchPath } from "~/utils/routeHelpers";
+import {
+  documentTitleFromSearchQuery,
+  newDocumentPath,
+  searchPath,
+} from "~/utils/routeHelpers";
 import { decodeURIComponentSafe, isTruthyQueryValue } from "~/utils/urls";
 import CollectionFilter from "./components/CollectionFilter";
 import DateFilter from "./components/DateFilter";
@@ -48,8 +57,10 @@ import useMobile from "~/hooks/useMobile";
 
 function Search() {
   const { t } = useTranslation();
-  const { documents, searches, policies } = useStores();
+  const { collections, documents, searches, policies } = useStores();
   const isMobile = useMobile();
+  const team = useCurrentTeam();
+  const can = usePolicy(team);
 
   // routing
   const params = useQuery();
@@ -311,6 +322,16 @@ function Search() {
   const handleEscape = () => searchInputRef.current?.focus();
   const showEmpty = !loading && query && data?.length === 0;
 
+  // A search with no results means nobody has written this answer yet, so offer
+  // to create a document titled with the question for someone to answer.
+  const newDocumentTitle = query ? documentTitleFromSearchQuery(query) : "";
+  const showCreateDocument =
+    !!showEmpty && !!newDocumentTitle && can.createDocument;
+  const newDocumentTo = newDocumentPath(
+    collections.publishTargetId(collectionId),
+    { title: newDocumentTitle }
+  );
+
   const sortInput = filterVisibility.sort ? (
     <SortInput
       sort={sort}
@@ -412,10 +433,30 @@ function Search() {
               </Fade>
             ) : showEmpty ? (
               <Fade>
-                <Centered column>
+                <Centered column align="center" gap={12}>
                   <Text as="p" type="secondary">
                     {t("No documents found for your search filters.")}
                   </Text>
+                  {showCreateDocument && (
+                    <>
+                      <Text as="p" type="secondary">
+                        <Trans
+                          defaults="No one has written an answer to <em>{{ searchQuery }}</em> yet."
+                          values={{ searchQuery: newDocumentTitle }}
+                          components={{ em: <strong /> }}
+                        />
+                      </Text>
+                      <Button
+                        as={Link}
+                        to={newDocumentTo}
+                        icon={<PlusIcon />}
+                        onPointerEnter={preloadEditor}
+                        onFocus={preloadEditor}
+                      >
+                        {t("Write the answer")}
+                      </Button>
+                    </>
+                  )}
                 </Centered>
               </Fade>
             ) : null}

@@ -1,4 +1,5 @@
 import queryString from "query-string";
+import { DocumentValidation } from "@shared/validations";
 import type Collection from "~/models/Collection";
 import type Comment from "~/models/Comment";
 import type Document from "~/models/Document";
@@ -204,17 +205,33 @@ export function newTemplatePath(collectionId?: string) {
 }
 
 /**
+ * Normalizes a search query into a document title, collapsing whitespace and
+ * truncating to the maximum title length accepted by the server.
+ *
+ * @param query the raw search query.
+ * @returns a title, or an empty string when the query has no content.
+ */
+export function documentTitleFromSearchQuery(query: string): string {
+  return query
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, DocumentValidation.maxTitleLength);
+}
+
+/**
  * Returns the path to create a new document, optionally within a collection
  * or from a template.
  *
  * @param collectionId an optional collection to create the document in.
- * @param params optional parameters such as a template to base the document on.
+ * @param params optional parameters such as a template to base the document on,
+ * or a title to pre-fill the new document with.
  * @returns the path to the new document screen.
  */
 export function newDocumentPath(
   collectionId?: string | null,
   params: {
     templateId?: string;
+    title?: string;
   } = {}
 ): string {
   const search = queryString.stringify(params);

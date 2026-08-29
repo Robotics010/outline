@@ -37,16 +37,37 @@ addition if wanted, not a redesign.
 
 ## 3. Quick search to ask a question and find an answer
 
-**Status: Minor change.**
+**Status: Implemented.**
 
 This is deterministic keyword search, not an AI/LLM feature — a query with
 zero results simply means no answer exists yet. Outline's search already
-works end-to-end (`app/scenes/Search/Search.tsx`,
-`server/routes/api/documents/documents.ts`). What's missing is the
-"suggest creating a new document titled with the question" CTA on the
-zero-results state: `app/scenes/DocumentNew.tsx` already supports creating
-a pre-titled document from a `title` query param, it just isn't surfaced
-in the search empty state or as a command-bar action yet.
+worked end-to-end (`app/scenes/Search/Search.tsx`,
+`server/routes/api/documents/documents.ts`); what was missing was the
+"write the answer" path out of the zero-results state.
+
+Now built:
+
+- The search empty state offers a **"Write the answer"** button that creates
+  a document pre-titled with the query, via the `?title=` param
+  `app/scenes/DocumentNew.tsx` already supported.
+- The same is available from the command bar as *Create a document titled
+  "…"* (`createDocumentWithTitleActionFactory` in
+  `app/actions/definitions/documents.tsx`), alongside the existing
+  *Search documents for "…"* action.
+- The document is **published immediately** rather than left as a private
+  draft, so any other author can pick the question up and answer it.
+  Publishing needs a collection, so the destination is resolved by
+  `CollectionsStore.publishTargetId`: the active collection filter → the
+  team's `defaultCollectionId` → the first collection the user can create
+  in. An unpublished draft is the fallback only when the user can write to
+  no collection at all.
+- Queries are normalized into titles by `documentTitleFromSearchQuery`
+  (`app/utils/routeHelpers.ts`), which collapses whitespace and truncates to
+  `DocumentValidation.maxTitleLength` so a long query can't fail creation.
+
+Not covered: the "search in document" (`documentId`) filter does not create
+a child of that document — that would need `title` support in
+`newNestedDocumentPath`.
 
 ## 4. Any author can view or change any KB document
 
