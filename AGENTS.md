@@ -13,6 +13,16 @@ There is a web client which is fully responsive and works on mobile devices.
 
 Refer to /docs/ARCHITECTURE.md for detailed architecture documentation.
 
+## Project Context
+
+This fork is being customized to run as the knowledge base for the
+**«На Автопилоте»** robotics student project. Customization work is
+tracked as a backlog in [`docs/ROADMAP.md`](docs/ROADMAP.md) — check it for
+planned features (auth-tracked authorship, a project home view,
+deterministic Q&A-style quick search, open view/edit access for all
+authors, a required question/TLDR/full-answer document template, and prod
+VPS deployment) before assuming default upstream Outline behavior applies.
+
 ## Instructions
 
 You're an expert in the following areas:
@@ -30,7 +40,7 @@ You're an expert in the following areas:
 
 ## General Guidelines
 
-- Critical – Do not create new markdown (.md) files.
+- Only create new markdown (.md) files when explicitly requested by the user; do not create them speculatively as part of unrelated code changes.
 - Use early returns for readability.
 - Emphasize type safety and static analysis.
 - Follow consistent oxfmt formatting.
